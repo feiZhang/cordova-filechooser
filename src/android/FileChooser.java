@@ -2,8 +2,12 @@ package com.megster.cordova;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.Context;
+import android.content.ContentResolver;
+import android.provider.MediaStore.Images.ImageColumns;
 import android.net.Uri;
 import android.util.Log;
+import android.database.Cursor;
 
 import org.apache.cordova.CordovaArgs;
 import org.apache.cordova.CallbackContext;
@@ -59,7 +63,28 @@ public class FileChooser extends CordovaPlugin {
                 if (uri != null) {
 
                     Log.w(TAG, uri.toString());
-                    callback.success(uri.toString());
+
+                    final String scheme = uri.getScheme();
+                    String filePath = null;
+                    if ( scheme == null )
+                        filePath = uri.getPath();
+                    else if ( ContentResolver.SCHEME_FILE.equals( scheme ) ) {
+                        filePath = uri.getPath();
+                    } else if ( ContentResolver.SCHEME_CONTENT.equals( scheme ) ) {
+                        Context context = cordova.getActivity().getApplicationContext();
+                        Cursor cursor = context.getContentResolver().query( uri, new String[] { ImageColumns.DATA }, null, null, null );
+                        if ( null != cursor ) {
+                            if ( cursor.moveToFirst() ) {
+                                int index = cursor.getColumnIndex( ImageColumns.DATA );
+                                if ( index > -1 ) {
+                                    filePath = cursor.getString( index );
+                                }
+                            }
+                            cursor.close();
+                        }
+                    }
+
+                    callback.success(filePath);
 
                 } else {
 
